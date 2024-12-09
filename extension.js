@@ -33,7 +33,7 @@ function getStoragePath() {
     return path.join(basePath, 'storage.json');
 }
 
-function modifyMacMachineId() {
+function modifyTelemetryIds() {
     try {
         const storagePath = getStoragePath();
 
@@ -45,25 +45,44 @@ function modifyMacMachineId() {
         // 读取文件
         let data = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
 
-        // 获取用户配置的 machineId 或生成随机 ID
+        // 获取用户配置
         const config = vscode.workspace.getConfiguration('cursorFakeMachine');
         const customMachineId = config.get('customMachineId');
-        const newMachineId = customMachineId || generateRandomMachineId();
+        
+        // 生成新的 ID
+        const newMacMachineId = customMachineId || generateRandomMachineId();
+        const newMachineId = generateHexString(64);  // 生成64位的十六进制字符串
+        const newDeviceId = generateRandomMachineId();  // UUID 格式
 
-        data['telemetry.macMachineId'] = newMachineId;
+        // 更新所有遥测 ID
+        data['telemetry.macMachineId'] = newMacMachineId;
+        data['telemetry.machineId'] = newMachineId;
+        data['telemetry.devDeviceId'] = newDeviceId;
 
         // 写回文件
         fs.writeFileSync(storagePath, JSON.stringify(data, null, 2), 'utf8');
 
         return {
             success: true,
-            message: '已成功修改 telemetry.macMachineId',
-            newId: newMachineId,
+            message: '已成功修改所有遥测 ID',
+            macMachineId: newMacMachineId,
+            machineId: newMachineId,
+            devDeviceId: newDeviceId,
             path: storagePath,
         };
     } catch (error) {
         throw new Error(`修改失败: ${error.message}`);
     }
+}
+
+// 新增：生成指定长度的十六进制字符串
+function generateHexString(length) {
+    const hex = '0123456789abcdef';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += hex[Math.floor(Math.random() * 16)];
+    }
+    return result;
 }
 
 function generateRandomMachineId() {
@@ -77,8 +96,13 @@ function generateRandomMachineId() {
 function activate(context) {
     let disposable = vscode.commands.registerCommand('cursor-fake-machine.cursor-fake-machine', async function () {
         try {
-            const result = modifyMacMachineId();
-            vscode.window.showInformationMessage(`修改成功！\n路径: ${result.path}\n新的 machineId: ${result.newId}`);
+            const result = modifyTelemetryIds();
+            vscode.window.showInformationMessage(
+                `修改成功！\n路径: ${result.path}\n` +
+                `新的 macMachineId: ${result.macMachineId}\n` +
+                `新的 machineId: ${result.machineId}\n` +
+                `新的 devDeviceId: ${result.devDeviceId}`
+            );
         } catch (error) {
             vscode.window.showErrorMessage(`修改失败: ${error.message}`);
 
