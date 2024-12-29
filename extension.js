@@ -100,7 +100,7 @@ function cleanupBackupFiles(storagePath) {
         const files = fs.readdirSync(dirPath);
         
         // 查找并删除所有 backup_ 开头的文件
-        const backupFiles = files.filter(file => file.startsWith('backup_'));
+        const backupFiles = files.filter(file => file.includes('storage.backup'));
         for (const file of backupFiles) {
             fs.unlinkSync(path.join(dirPath, file));
         }
