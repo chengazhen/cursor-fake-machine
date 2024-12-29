@@ -32,7 +32,7 @@
         "commands": [
             {
                 "command": "cursor-fake-machine.cursor-fake-machine",
-                "title": "Fake Cursor: Fake Machine"
+                "title": "重置 Cursor 机器 ID (同时清理备份)"
             }
         ]
     },

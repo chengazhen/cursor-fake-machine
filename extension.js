@@ -93,25 +93,55 @@ function generateRandomMachineId() {
     });
 }
 
+// 添加新的清理备份文件函数
+function cleanupBackupFiles(storagePath) {
+    try {
+        const dirPath = path.dirname(storagePath);
+        const files = fs.readdirSync(dirPath);
+        
+        // 查找并删除所有 backup_ 开头的文件
+        const backupFiles = files.filter(file => file.startsWith('backup_'));
+        for (const file of backupFiles) {
+            fs.unlinkSync(path.join(dirPath, file));
+        }
+        
+        return {
+            success: true,
+            message: `已清理 ${backupFiles.length} 个备份文件`,
+            cleanedFiles: backupFiles
+        };
+    } catch (error) {
+        throw new Error(`清理备份文件失败: ${error.message}`);
+    }
+}
+
 function activate(context) {
     let disposable = vscode.commands.registerCommand('cursor-fake-machine.cursor-fake-machine', async function () {
         try {
+            // 首先清理备份文件
+            const storagePath = getStoragePath();
+            const cleanupResult = cleanupBackupFiles(storagePath);
+            
+            // 然后修改遥测 ID
             const result = modifyTelemetryIds();
+            
             vscode.window.showInformationMessage(
-                `修改成功！\n路径: ${result.path}\n` +
+                `操作成功完成！\n` +
+                `${cleanupResult.message}\n` +
+                `已更新遥测 ID:\n` +
+                `路径: ${result.path}\n` +
                 `新的 macMachineId: ${result.macMachineId}\n` +
                 `新的 machineId: ${result.machineId}\n` +
                 `新的 devDeviceId: ${result.devDeviceId}`
             );
         } catch (error) {
-            vscode.window.showErrorMessage(`修改失败: ${error.message}`);
+            vscode.window.showErrorMessage(`操作失败: ${error.message}`);
 
-            // 如果是路径不存在的错误，提示用户设置路径
             if (error.message.includes('不存在')) {
                 const answer = await vscode.window.showQuestionMessage(
                     '是否要打开设置页面指定 storage.json 的路径？',
                     '是',
-                    '否',
+                    '否'
                 );
                 if (answer === '是') {
                     vscode.commands.executeCommand('workbench.action.openSettings', 'cursorFakeMachine.storagePath');
